@@ -15,7 +15,7 @@ export default function Home() {
         padding: "10px 0"
       }}>
         <h2 style={{ margin: 0 }}>TradMind 🚀</h2>
-        <button style={{
+        <button onClick={() => window.location.href='/api/auth/signin'} style={{
           padding: "10px 16px",
           borderRadius: "10px",
           border: "none",
