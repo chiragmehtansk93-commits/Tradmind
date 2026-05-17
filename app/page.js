@@ -1,4 +1,4 @@
-'use client';
+         'use client';
 
 import { useState } from 'react';
 
@@ -9,7 +9,9 @@ export default function Home() {
   const [portfolio, setPortfolio] = useState([]);
   const [qty, setQty] = useState('');
 
-  const apiKey = process.env.NEXT_PUBLIC_FINNHUB_API_KEY || process.env.FINNHUB_API_KEY;
+  const apiKey =
+    process.env.NEXT_PUBLIC_FINNHUB_API_KEY ||
+    process.env.FINNHUB_API_KEY;
 
   const fetchPrice = async () => {
     if (!symbol) return;
@@ -19,12 +21,14 @@ export default function Home() {
       const res = await fetch(
         `https://finnhub.io/api/v1/quote?symbol=${symbol.toUpperCase()}&token=${apiKey}`
       );
-      const data = await res.json();
 
-      if (data.c) {
+      const data = await res.json();
+      console.log(data);
+
+      if (data && data.c !== undefined && data.c !== null) {
         setPrice(data.c);
       } else {
-        alert('Symbol not found');
+        alert('Invalid symbol or API issue');
       }
     } catch (err) {
       alert('Error fetching price');
@@ -34,7 +38,7 @@ export default function Home() {
   };
 
   const addToPortfolio = () => {
-    if (!symbol || !price || !qty) return;
+    if (!symbol || price === null || !qty) return;
 
     setPortfolio([
       ...portfolio,
@@ -98,7 +102,7 @@ export default function Home() {
         </button>
       </div>
 
-      {price && (
+      {price !== null && (
         <div
           style={{
             marginTop: 20,
@@ -108,7 +112,7 @@ export default function Home() {
           }}
         >
           <h2>{symbol.toUpperCase()}</h2>
-          <p>Live Price: ₹ / $ {price}</p>
+          <p>Live Price: {price}</p>
 
           <input
             value={qty}
@@ -160,4 +164,4 @@ export default function Home() {
       </div>
     </main>
   );
-}
+          }   
