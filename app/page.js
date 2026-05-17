@@ -1,6 +1,6 @@
-         'use client';
+ 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function Home() {
   const [symbol, setSymbol] = useState('');
@@ -8,10 +8,20 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [portfolio, setPortfolio] = useState([]);
   const [qty, setQty] = useState('');
+  const [buyPrice, setBuyPrice] = useState('');
 
-  const apiKey =
-    process.env.NEXT_PUBLIC_FINNHUB_API_KEY ||
-    process.env.FINNHUB_API_KEY;
+  const apiKey = process.env.NEXT_PUBLIC_FINNHUB_API_KEY;
+
+  useEffect(() => {
+    const saved = localStorage.getItem('tradmind_portfolio');
+    if (saved) {
+      setPortfolio(JSON.parse(saved));
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('tradmind_portfolio', JSON.stringify(portfolio));
+  }, [portfolio]);
 
   const fetchPrice = async () => {
     if (!symbol) return;
@@ -21,11 +31,9 @@ export default function Home() {
       const res = await fetch(
         `https://finnhub.io/api/v1/quote?symbol=${symbol.toUpperCase()}&token=${apiKey}`
       );
-
       const data = await res.json();
-      console.log(data);
 
-      if (data && data.c !== undefined && data.c !== null) {
+      if (data && data.c && data.c > 0) {
         setPrice(data.c);
       } else {
         alert('Invalid symbol or API issue');
@@ -38,24 +46,46 @@ export default function Home() {
   };
 
   const addToPortfolio = () => {
-    if (!symbol || price === null || !qty) return;
+    if (!symbol || !price || !qty || !buyPrice) return;
 
     setPortfolio([
       ...portfolio,
       {
         symbol: symbol.toUpperCase(),
         qty: Number(qty),
-        price,
+        buyPrice: Number(buyPrice),
+        currentPrice: price,
       },
     ]);
 
     setSymbol('');
     setQty('');
+    setBuyPrice('');
     setPrice(null);
   };
 
+  const deleteHolding = (index) => {
+    const updated = portfolio.filter((_, i) => i !== index);
+    setPortfolio(updated);
+  };
+
+  const refreshHoldingPrice = async (index, sym) => {
+    try {
+      const res = await fetch(
+        `https://finnhub.io/api/v1/quote?symbol=${sym}&token=${apiKey}`
+      );
+      const data = await res.json();
+
+      if (data && data.c) {
+        const updated = [...portfolio];
+        updated[index].currentPrice = data.c;
+        setPortfolio(updated);
+      }
+    } catch {}
+  };
+
   const totalValue = portfolio.reduce(
-    (sum, item) => sum + item.qty * item.price,
+    (sum, item) => sum + item.qty * item.currentPrice,
     0
   );
 
@@ -69,48 +99,24 @@ export default function Home() {
         fontFamily: 'Arial',
       }}
     >
-      <h1>TradMind 🚀</h1>
-      <p>Live Stock Tracker + Portfolio</p>
+      <h1 style={{ fontSize: 42 }}>TradMind 🚀</h1>
+      <p>Live Stock Tracker + Smart Portfolio</p>
 
       <div style={{ marginTop: 20 }}>
         <input
           value={symbol}
           onChange={(e) => setSymbol(e.target.value)}
-          placeholder="Enter symbol (AAPL, TSLA, RELIANCE.NS)"
-          style={{
-            padding: 12,
-            width: '100%',
-            maxWidth: 350,
-            borderRadius: 10,
-            border: 'none',
-            marginBottom: 10,
-          }}
+          placeholder="AAPL / TSLA / RELIANCE.NS / TCS.NS"
+          style={inputStyle}
         />
 
-        <br />
-
-        <button
-          onClick={fetchPrice}
-          style={{
-            padding: '12px 20px',
-            borderRadius: 10,
-            border: 'none',
-            fontWeight: 'bold',
-          }}
-        >
+        <button onClick={fetchPrice} style={buttonStyle}>
           {loading ? 'Loading...' : 'Get Live Price'}
         </button>
       </div>
 
-      {price !== null && (
-        <div
-          style={{
-            marginTop: 20,
-            padding: 20,
-            background: '#1e293b',
-            borderRadius: 12,
-          }}
-        >
+      {price && (
+        <div style={cardStyle}>
           <h2>{symbol.toUpperCase()}</h2>
           <p>Live Price: {price}</p>
 
@@ -118,22 +124,17 @@ export default function Home() {
             value={qty}
             onChange={(e) => setQty(e.target.value)}
             placeholder="Quantity"
-            style={{
-              padding: 10,
-              borderRadius: 10,
-              border: 'none',
-              marginRight: 10,
-            }}
+            style={inputStyle}
           />
 
-          <button
-            onClick={addToPortfolio}
-            style={{
-              padding: '10px 16px',
-              borderRadius: 10,
-              border: 'none',
-            }}
-          >
+          <input
+            value={buyPrice}
+            onChange={(e) => setBuyPrice(e.target.value)}
+            placeholder="Your Buy Price"
+            style={inputStyle}
+          />
+
+          <button onClick={addToPortfolio} style={buttonStyle}>
             Add to Portfolio
           </button>
         </div>
@@ -145,23 +146,81 @@ export default function Home() {
         {portfolio.length === 0 ? (
           <p>No holdings yet</p>
         ) : (
-          portfolio.map((item, i) => (
-            <div
-              key={i}
-              style={{
-                background: '#1e293b',
-                padding: 15,
-                borderRadius: 12,
-                marginBottom: 10,
-              }}
-            >
-              {item.symbol} — Qty: {item.qty} — Price: {item.price}
-            </div>
-          ))
+          portfolio.map((item, i) => {
+            const pnl =
+              (item.currentPrice - item.buyPrice) * item.qty;
+
+            return (
+              <div key={i} style={cardStyle}>
+                <h3>{item.symbol}</h3>
+                <p>Qty: {item.qty}</p>
+                <p>Buy: {item.buyPrice}</p>
+                <p>Current: {item.currentPrice}</p>
+                <p>
+                  P/L:{' '}
+                  <span
+                    style={{
+                      color: pnl >= 0 ? 'lightgreen' : 'tomato',
+                    }}
+                  >
+                    {pnl.toFixed(2)}
+                  </span>
+                </p>
+
+                <button
+                  onClick={() =>
+                    refreshHoldingPrice(i, item.symbol)
+                  }
+                  style={buttonStyle}
+                >
+                  Refresh Price
+                </button>
+
+                <button
+                  onClick={() => deleteHolding(i)}
+                  style={{
+                    ...buttonStyle,
+                    background: '#dc2626',
+                    marginTop: 10,
+                  }}
+                >
+                  Delete
+                </button>
+              </div>
+            );
+          })
         )}
 
-        <h3>Total Value: {totalValue.toFixed(2)}</h3>
+        <h2>Total Portfolio Value: {totalValue.toFixed(2)}</h2>
       </div>
     </main>
   );
-          }   
+}
+
+const inputStyle = {
+  padding: 12,
+  width: '100%',
+  maxWidth: 400,
+  borderRadius: 10,
+  border: 'none',
+  marginBottom: 10,
+  display: 'block',
+};
+
+const buttonStyle = {
+  padding: '12px 20px',
+  borderRadius: 10,
+  border: 'none',
+  fontWeight: 'bold',
+  cursor: 'pointer',
+  marginBottom: 10,
+};
+
+const cardStyle = {
+  background: '#1e293b',
+  padding: 20,
+  borderRadius: 14,
+  marginTop: 15,
+};       
+
+        
