@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 
 export default function Home() {
   const [email, setEmail] = useState('');
@@ -11,15 +11,15 @@ export default function Home() {
   const [avg, setAvg] = useState('');
 
   const addHolding = () => {
-    if (!symbol || !qty || !avg) return;
+    if (!symbol.trim() || !qty.trim() || !avg.trim()) return;
 
-    setHoldings([
-      ...holdings,
+    setHoldings((prev) => [
+      ...prev,
       {
-        symbol,
+        symbol: symbol.toUpperCase(),
         qty,
-        avg
-      }
+        avg,
+      },
     ]);
 
     setSymbol('');
@@ -27,84 +27,96 @@ export default function Home() {
     setAvg('');
   };
 
-  if (!loggedIn) {
-    return (
-      <main style={{
+  return (
+    <main
+      style={{
         minHeight: '100vh',
         background: 'linear-gradient(135deg,#0f172a,#1e293b)',
         color: 'white',
         padding: '20px',
-        fontFamily: 'Arial'
-      }}>
-        <h1>TradMind 🚀</h1>
-        <p>AI Portfolio Intelligence</p>
+        fontFamily: 'Arial, sans-serif',
+      }}
+    >
+      {!loggedIn ? (
+        <>
+          <h1>TradMind 🚀</h1>
+          <p>AI Portfolio Intelligence</p>
 
-        <input
-          placeholder="Enter Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          style={{
-            padding: '12px',
-            width: '250px',
-            borderRadius: '10px',
-            border: 'none'
-          }}
-        />
+          <input
+            type="email"
+            placeholder="Enter Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            style={{
+              padding: '12px',
+              width: '250px',
+              borderRadius: '10px',
+              border: 'none',
+              marginBottom: '16px',
+            }}
+          />
 
-        <br /><br />
+          <br />
 
-        <button
-          onClick={() => setLoggedIn(true)}
-          style={{
-            padding: '12px 20px',
-            borderRadius: '10px',
-            border: 'none',
-            fontWeight: 'bold'
-          }}
-        >
-          Login
-        </button>
-      </main>
-    );
-  }
+          <button
+            onClick={() => setLoggedIn(true)}
+            style={{
+              padding: '12px 20px',
+              borderRadius: '10px',
+              border: 'none',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+            }}
+          >
+            Login
+          </button>
+        </>
+      ) : (
+        <>
+          <h1>Welcome {email || 'User'}</h1>
+          <h2>Portfolio Dashboard</h2>
 
-  return (
-    <main style={{
-      minHeight: '100vh',
-      background: '#111827',
-      color: 'white',
-      padding: '20px'
-    }}>
-      <h1>Welcome {email}</h1>
-      <h2>Portfolio Dashboard</h2>
+          <input
+            placeholder="Stock Symbol"
+            value={symbol}
+            onChange={(e) => setSymbol(e.target.value)}
+            style={{ padding: '10px', margin: '5px' }}
+          />
 
-      <input
-        placeholder="Stock Symbol"
-        value={symbol}
-        onChange={(e) => setSymbol(e.target.value)}
-      />
+          <input
+            placeholder="Qty"
+            value={qty}
+            onChange={(e) => setQty(e.target.value)}
+            style={{ padding: '10px', margin: '5px' }}
+          />
 
-      <input
-        placeholder="Qty"
-        value={qty}
-        onChange={(e) => setQty(e.target.value)}
-      />
+          <input
+            placeholder="Avg Price"
+            value={avg}
+            onChange={(e) => setAvg(e.target.value)}
+            style={{ padding: '10px', margin: '5px' }}
+          />
 
-      <input
-        placeholder="Avg Price"
-        value={avg}
-        onChange={(e) => setAvg(e.target.value)}
-      />
+          <button
+            onClick={addHolding}
+            style={{
+              padding: '10px 16px',
+              margin: '5px',
+              cursor: 'pointer',
+            }}
+          >
+            Add
+          </button>
 
-      <button onClick={addHolding}>Add</button>
-
-      <div style={{ marginTop: '20px' }}>
-        {holdings.map((h, i) => (
-          <div key={i}>
-            {h.symbol} - {h.qty} @ ₹{h.avg}
+          <div style={{ marginTop: '20px' }}>
+            {holdings.map((h, i) => (
+              <div key={i}>
+                {h.symbol} — {h.qty} @ ₹{h.avg}
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </>
+      )}
     </main>
   );
 }
